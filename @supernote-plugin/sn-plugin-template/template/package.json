@@ -1,0 +1,47 @@
+{
+  "name": "HelloWorld",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "android": "react-native run-android",
+    "lint": "eslint .",
+    "start": "react-native start",
+    "test": "jest",
+    "build": "node -e \"process.platform==='win32'?require('child_process').execSync('pwsh -File scripts/buildPlugin.ps1',{stdio:'inherit'}):require('child_process').execSync('bash scripts/buildPlugin.sh',{stdio:'inherit'})\"",
+    "verify": "node -e \"process.platform==='win32'?require('child_process').execSync('pwsh -File scripts/verifyPluginPackage.ps1',{stdio:'inherit'}):require('child_process').execSync('bash scripts/verifyPluginPackage.sh',{stdio:'inherit'})\"",
+    "recover": "node -e \"process.platform==='win32'?require('child_process').execSync('pwsh -File scripts/recoverPluginhost.ps1',{stdio:'inherit'}):require('child_process').execSync('bash scripts/recoverPluginhost.sh',{stdio:'inherit'})\"",
+    "diagnostics": "node -e \"process.platform==='win32'?require('child_process').execSync('pwsh -File scripts/collectPluginhostDiagnostics.ps1',{stdio:'inherit'}):require('child_process').execSync('bash scripts/collectPluginhostDiagnostics.sh',{stdio:'inherit'})\"",
+    "deploy": "node -e \"process.platform==='win32'?require('child_process').execSync('pwsh -File scripts/deployPlugin.ps1',{stdio:'inherit'}):require('child_process').execSync('bash scripts/deployPlugin.sh',{stdio:'inherit'})\"",
+    "send": "node -e \"process.platform==='win32'?require('child_process').execSync('pwsh -File scripts/sendBundle.ps1',{stdio:'inherit'}):require('child_process').execSync('bash scripts/sendBundle.sh',{stdio:'inherit'})\"",
+    "run": "node -e \"process.platform==='win32'?require('child_process').execSync('pwsh -File scripts/runPlugin.ps1',{stdio:'inherit'}):require('child_process').execSync('bash scripts/runPlugin.sh',{stdio:'inherit'})\"",
+    "deploy:run": "npm run deploy && npm run run",
+    "send:run": "npm run send && npm run run"
+  },
+  "dependencies": {
+    "react": "19.0.0",
+    "react-native": "0.79.2",
+    "sn-plugin-lib": "^0.1.19"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@babel/preset-env": "^7.25.3",
+    "@babel/runtime": "^7.25.0",
+    "@react-native-community/cli": "18.0.0",
+    "@react-native-community/cli-platform-android": "18.0.0",
+    "@react-native/babel-preset": "0.79.2",
+    "@react-native/eslint-config": "0.79.2",
+    "@react-native/metro-config": "0.79.2",
+    "@react-native/typescript-config": "0.79.2",
+    "@types/jest": "^29.5.13",
+    "@types/react": "^19.0.0",
+    "@types/react-test-renderer": "^19.0.0",
+    "eslint": "^8.19.0",
+    "jest": "^29.6.3",
+    "prettier": "2.8.8",
+    "react-test-renderer": "19.0.0",
+    "typescript": "5.0.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

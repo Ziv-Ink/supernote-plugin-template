@@ -1,0 +1,28 @@
+{
+  "name": "@supernote-plugin/sn-plugin-template",
+  "version": "1.0.12",
+  "description": "The template used by `npx @react-native-community/cli init` to bootstrap a React Native application.",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "jest",
+    "version": "1.0.0"
+  },
+  "type": "commonjs",
+  "files": [
+    "template/*",
+    "template.config.js"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "semver": "^7.6.3"
+  },
+  "homepage": "https://github.com/react-native-community/template/tree/main",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/react-native-community/template.git"
+  }
+}
