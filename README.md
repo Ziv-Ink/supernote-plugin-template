@@ -1,27 +1,29 @@
 # Supernote Plugin Template
 
-A simple template for Supernote plugins for automated testing. It has no UI and provides a single button on the side.
+A simple template for Supernote plugins. Ships with cross-platform scripts (bash + PowerShell) that automate bundling, deploying, and launching plugins on a connected device via ADB.
+
+The generated plugin has no UI — just a single button on the NOTE sidebar.
+
+## Requirements
+
+Python 3, Node.js, ADB
 
 ## Setup
 
-Create a new project from this template by running the `setup.py` script:
-
 ```bash
-python3 setup.py <project-name>
+python3 setup.py MyPlugin
 ```
-
-This will bootstrap a new React Native project properly configured for Supernote plugin development.
 
 ## Scripts
 
-Inside your generated project, you can use the following cross-platform scripts (works on both Mac and Windows):
-
-* `npm run build` - Build the plugin package
-* `npm run send` - Push the package to a connected Supernote device
-* `npm run run` - Launch the plugin on the device via UI automation
-* `npm run deploy` - Install the plugin directly via the Supernote Plugin Manager
-* `npm run send:run` - Bundle, push, and run
-* `npm run deploy:run` - Bundle, deploy, and run
-* `npm run verify` - Validate the structure of your generated `.snplg`
-* `npm run diagnostics` - Collect logs and window state from the PluginHost
-* `npm run recover` - Wipe PluginHost data if it gets stuck in a crash loop
+| Command | What it does |
+|---|---|
+| `npm run build` | Build the `.snplg` package |
+| `npm run send` | Bundle JS and push to device |
+| `npm run run` | Launch the plugin on device via UI automation |
+| `npm run deploy` | Full install through the Supernote Plugin Manager |
+| `npm run send:run` | Send + run |
+| `npm run deploy:run` | Deploy + run |
+| `npm run verify` | Validate `.snplg` structure and native libraries |
+| `npm run diagnostics` | Collect PluginHost logs, screenshots, and window state |
+| `npm run recover` | Force-clear PluginHost data (use when stuck in a crash loop) |
