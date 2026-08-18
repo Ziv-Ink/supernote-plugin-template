@@ -14,7 +14,7 @@ def find_supernote_root(script_path: Path) -> Path | None:
     current = script_path.resolve().parent
 
     while True:
-        template = current / "template" / "@supernote-plugin" / "sn-plugin-template"
+        template = current / "@supernote-plugin" / "sn-plugin-template"
         if template.is_dir():
             return current
         if current.parent == current:
@@ -85,7 +85,7 @@ class Setup:
             print(f"Error: {error}", file=sys.stderr)
             return 1
 
-        template_path = self.supernote_root / "template" / "@supernote-plugin" / "sn-plugin-template"
+        template_path = self.supernote_root / "@supernote-plugin" / "sn-plugin-template"
         project_parent = Path.cwd().resolve()
         project_path = project_parent / project_name
         if project_path.exists() or project_path.is_symlink():
