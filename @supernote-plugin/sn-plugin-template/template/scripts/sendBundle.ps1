@@ -61,7 +61,7 @@ Require-Command "npx"
 
 $configPath = Join-Path $ProjectRoot "PluginConfig.json"
 if (-not (Test-Path $configPath)) {
-    Write-Die "missing $configPath"
+    Write-Die "missing $configPath (Run 'npm run build' first)"
 }
 
 $config = Get-Content $configPath | ConvertFrom-Json

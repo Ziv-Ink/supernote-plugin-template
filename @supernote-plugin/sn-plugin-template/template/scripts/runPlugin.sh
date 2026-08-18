@@ -86,7 +86,7 @@ parse_args() {
 read_project_metadata() {
     require_command jq
     [[ -f "$PROJECT_ROOT/PluginConfig.json" ]] ||
-        die "missing $PROJECT_ROOT/PluginConfig.json"
+        die "missing $PROJECT_ROOT/PluginConfig.json (Run 'npm run build' first)"
 
     PLUGIN_NAME="$(jq -er '.name | select(type == "string" and length > 0)' \
         "$PROJECT_ROOT/PluginConfig.json")" || die 'PluginConfig.json has no name'

@@ -66,6 +66,7 @@ main() {
     require_command jq
 
     local plugin_id bundle_name
+    [[ -f "$PROJECT_ROOT/PluginConfig.json" ]] || die "missing $PROJECT_ROOT/PluginConfig.json (Run 'npm run build' first)"
     plugin_id="$(jq -r ".pluginID" "$PROJECT_ROOT/PluginConfig.json")"
     bundle_name="$(jq -r ".name" "$PROJECT_ROOT/PluginConfig.json")"
 
