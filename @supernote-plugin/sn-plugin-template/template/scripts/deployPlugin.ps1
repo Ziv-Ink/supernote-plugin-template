@@ -155,8 +155,8 @@ function Test-PluginPackage([string]$PkgPath) {
     }
 
     # Run extended verification if available
-    $verifyScript = Join-Path $ScriptDir "verify_plugin_package.ps1"
-    $verifyShScript = Join-Path $ScriptDir "verify_plugin_package.sh"
+    $verifyScript = Join-Path $ScriptDir "verifyPluginPackage.ps1"
+    $verifyShScript = Join-Path $ScriptDir "verifyPluginPackage.sh"
     if (Test-Path $verifyScript) {
         Write-Log "Running the complete package inspection..."
         & pwsh -File $verifyScript -PackagePath $PkgPath

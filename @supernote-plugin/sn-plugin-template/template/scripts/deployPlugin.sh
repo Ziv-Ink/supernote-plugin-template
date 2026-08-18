@@ -199,9 +199,9 @@ verify_package() {
     [[ "$packaged_id" == "$PLUGIN_ID" ]] ||
         die "package pluginID mismatch: expected $PLUGIN_ID, found $packaged_id"
 
-    if [[ -f "$PROJECT_ROOT/verify_plugin_package.sh" ]]; then
+    if [[ -f "$PROJECT_ROOT/scripts/verifyPluginPackage.sh" ]]; then
         log 'Running the complete package inspection...'
-        bash "$PROJECT_ROOT/verify_plugin_package.sh" "$package_path"
+        bash "$PROJECT_ROOT/scripts/verifyPluginPackage.sh" "$package_path"
     fi
 }
 
@@ -221,7 +221,7 @@ build_plugin() {
     log 'Packaging the plugin...'
     (
         cd "$PROJECT_ROOT"
-        bash ./buildPlugin.sh
+        bash ./scripts/buildPlugin.sh
     )
 
     # The official template may create PluginConfig.json during the first

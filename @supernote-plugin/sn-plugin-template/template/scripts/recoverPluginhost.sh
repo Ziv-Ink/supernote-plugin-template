@@ -26,7 +26,7 @@ Usage: ./recover_pluginhost.sh --yes [--device SERIAL]
 Emergency recovery for a confirmed PluginHost crash or restart loop.
 
 WARNING: this clears ALL PluginHost application data, including every installed
-plugin. Collect diagnostics first with collect_pluginhost_diagnostics.sh.
+plugin. Collect diagnostics first with collectPluginhostDiagnostics.sh.
 
 Options:
   --yes            Confirm the destructive PluginHost data clear.
