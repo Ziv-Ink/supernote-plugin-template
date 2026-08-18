@@ -4,14 +4,11 @@ A simple template for Supernote plugins. Ships with cross-platform scripts (bash
 
 The generated plugin has no UI — just a single button on the NOTE sidebar.
 
-## Requirements
-
-Python 3, Node.js, ADB
-
 ## Setup
 
 ```bash
-python3 setup.py MyPlugin
+python3 setup.py MyPlugin   # Mac / Linux
+python setup.py MyPlugin    # Windows
 ```
 
 ## Scripts
