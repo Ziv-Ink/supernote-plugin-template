@@ -93,12 +93,6 @@ parse_args() {
                 STOP_BEFORE_INSTALL=1
                 shift
                 ;;
-                NO_LAUNCH=1
-                shift
-                ;;
-                LAUNCH_LABEL="$2"
-                shift 2
-                ;;
             -h|--help)
                 usage
                 exit 0
