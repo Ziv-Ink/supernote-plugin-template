@@ -23,4 +23,4 @@ python setup.py MyPlugin    # Windows
 | `npm run deploy:run` | Deploy + run |
 | `npm run verify` | Validate `.snplg` structure and native libraries |
 | `npm run diagnostics` | Collect PluginHost logs, screenshots, and window state |
-| `npm run recover` | Force-clear PluginHost data (use if stuck in a crash loop — deletes all plugins aside from stickers, the stickers themselves are deleted, and resets to default) |
+| `npm run recover` | Force-clear PluginHost data (use if stuck in a crash loop. deletes all plugins aside from stickers, the stickers themselves are deleted, and resets to default) |
