@@ -93,6 +93,9 @@ read_project_metadata() {
     PLUGIN_ID="$(jq -er '.pluginID | select(type == "string" and length > 0)' \
         "$PROJECT_ROOT/PluginConfig.json")" || die 'PluginConfig.json has no pluginID'
 
+    if [[ -z "$LAUNCH_LABEL" && -n "${PLUGIN_LAUNCH_LABEL:-}" ]]; then
+        LAUNCH_LABEL="$PLUGIN_LAUNCH_LABEL"
+    fi
     if [[ -z "$LAUNCH_LABEL" && -f "$PROJECT_ROOT/.supernote-launch-label" ]]; then
         IFS= read -r LAUNCH_LABEL < "$PROJECT_ROOT/.supernote-launch-label" || true
     fi

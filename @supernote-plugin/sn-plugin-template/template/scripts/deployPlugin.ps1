@@ -4,8 +4,7 @@ param(
     [string]$Package = "",
     [switch]$SkipBuild,
     [switch]$StopAfterPush,
-    [switch]$StopBeforeInstall,
-    [string]$LaunchLabel = $env:PLUGIN_LAUNCH_LABEL
+    [switch]$StopBeforeInstall
 )
 
 $ErrorActionPreference = 'Stop'
@@ -114,15 +113,6 @@ function Read-ProjectMetadata {
     }
     $script:DevicePluginPath = "$DevicePluginDir/$($script:PluginName).snplg"
 
-    if ([string]::IsNullOrWhiteSpace($LaunchLabel)) {
-        $labelFile = Join-Path $ProjectRoot ".supernote-launch-label"
-        if (Test-Path $labelFile) {
-            $script:LaunchLabel = (Get-Content $labelFile -TotalCount 1).Trim()
-        }
-    }
-    if ([string]::IsNullOrWhiteSpace($LaunchLabel)) {
-        $script:LaunchLabel = $script:PluginName
-    }
 }
 
 function Test-PluginPackage([string]$PkgPath) {

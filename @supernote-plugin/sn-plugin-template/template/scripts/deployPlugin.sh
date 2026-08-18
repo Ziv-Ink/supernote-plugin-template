@@ -15,7 +15,6 @@ DEVICE_SERIAL="${DEVICE_SERIAL:-}"
 SKIP_BUILD=0
 STOP_AFTER_PUSH=0
 STOP_BEFORE_INSTALL=0
-NO_LAUNCH=0
 PACKAGE_OVERRIDE=""
 LAUNCH_LABEL="${PLUGIN_LAUNCH_LABEL:-}"
 UI_SETTLE_SECONDS="${UI_SETTLE_SECONDS:-1}"
@@ -41,9 +40,9 @@ die() {
 
 usage() {
     cat <<'EOF'
-Usage: ./deploy_plugin.sh [options]
+Usage: ./deployPlugin.sh [options]
 
-Build, copy, install, and launch this plugin through the normal Supernote UI.
+Build, copy, and install this plugin through the normal Supernote UI.
 
 Options:
   --device SERIAL        Use one exact ADB device (or set DEVICE_SERIAL).
@@ -51,8 +50,6 @@ Options:
   --skip-build           Use the existing build/outputs/<name>.snplg package.
   --stop-after-push      Stop after verifying the package copied to MyStyle.
   --stop-before-install  Select the package, but do not press Install.
-  --no-launch            Install the package, but do not launch it from NOTE.
-  --launch-label LABEL   NOTE sidebar label to tap (defaults to plugin name).
   -h, --help             Show this help.
 
 The script fails closed if a device, UI control, package, or destination state
@@ -96,12 +93,9 @@ parse_args() {
                 STOP_BEFORE_INSTALL=1
                 shift
                 ;;
-            --no-launch)
                 NO_LAUNCH=1
                 shift
                 ;;
-            --launch-label)
-                [[ $# -ge 2 ]] || die '--launch-label requires a value'
                 LAUNCH_LABEL="$2"
                 shift 2
                 ;;
@@ -171,10 +165,6 @@ read_project_metadata() {
     fi
     DEVICE_PLUGIN_PATH="$DEVICE_PLUGIN_DIR/${PLUGIN_NAME}.snplg"
 
-    if [[ -z "$LAUNCH_LABEL" && -f "$PROJECT_ROOT/.supernote-launch-label" ]]; then
-        IFS= read -r LAUNCH_LABEL < "$PROJECT_ROOT/.supernote-launch-label" || true
-    fi
-    [[ -n "$LAUNCH_LABEL" ]] || LAUNCH_LABEL="$PLUGIN_NAME"
 }
 
 verify_package() {
@@ -454,28 +444,7 @@ wait_for_pluginhost_available() {
     return 1
 }
 
-log_pattern_count() {
-    local needle="$1"
-    adb_device logcat -d -v brief 2>/dev/null |
-        awk -v needle="$needle" 'index($0, needle) { count++ }
-            END { print count + 0 }'
-}
 
-wait_for_new_log_occurrence() {
-    local needle="$1"
-    local previous_count="$2"
-    local deadline current_count
-    deadline="$(( $(date +%s) + RUNTIME_TIMEOUT_SECONDS ))"
-    while (( $(date +%s) <= deadline )); do
-        current_count="$(log_pattern_count "$needle" || true)"
-        if [[ "$current_count" =~ ^[0-9]+$ ]] &&
-           (( current_count > previous_count )); then
-            return 0
-        fi
-        sleep 1
-    done
-    return 1
-}
 
 open_plugin_manager_fallback() {
     log 'Direct Plugin Manager route was unavailable; using the NOTE toolbar fallback...'
@@ -554,39 +523,6 @@ install_selected_package() {
     fi
 }
 
-launch_plugin() {
-    local event_pattern running_pattern
-    local previous_event_count previous_running_count current_pid
-    event_pattern="pluginID='$PLUGIN_ID', pluginName='$PLUGIN_NAME'"
-    running_pattern="Running \"$PLUGIN_NAME\""
-
-    log 'Opening NOTE to launch the installed plugin...'
-    adb_device shell am start \
-        -a android.intent.action.MAIN \
-        -c android.intent.category.LAUNCHER \
-        -n "$NOTE_COMPONENT" >/dev/null
-    wait_for_foreground 'com.ratta.supernote.note/' ||
-        die 'NOTE did not produce a foreground window for plugin launch'
-    sleep "$UI_SETTLE_SECONDS"
-
-    dump_ui
-    tap_unique_node content-desc plugins
-    dump_ui
-    ui_has_unique_node text "$LAUNCH_LABEL" ||
-        die "NOTE plugin popup did not list launch label $LAUNCH_LABEL exactly once"
-
-    previous_event_count="$(log_pattern_count "$event_pattern")"
-    previous_running_count="$(log_pattern_count "$running_pattern")"
-    tap_unique_node text "$LAUNCH_LABEL"
-    wait_for_new_log_occurrence "$event_pattern" "$previous_event_count" ||
-        die "PluginHost did not receive the configured plugin ID and name within ${RUNTIME_TIMEOUT_SECONDS}s"
-    wait_for_new_log_occurrence "$running_pattern" "$previous_running_count" ||
-        die "PluginHost did not log '$running_pattern' within ${RUNTIME_TIMEOUT_SECONDS}s"
-
-    current_pid="$(pluginhost_pid || true)"
-    [[ -n "$current_pid" ]] || die 'PluginHost exited while launching the plugin'
-    log "Launched $PLUGIN_NAME through NOTE (PluginHost PID $current_pid)."
-}
 
 main() {
     parse_args "$@"
