@@ -112,6 +112,14 @@ class Setup:
                 project_parent,
                 "Creating project...",
             )
+            scripts_dir = project_path / "scripts"
+            if scripts_dir.is_dir():
+                for script in scripts_dir.glob("*.sh"):
+                    script.chmod(script.stat().st_mode | stat.S_IEXEC)
+            
+            gradlew = project_path / "android" / "gradlew"
+            if gradlew.is_file():
+                gradlew.chmod(gradlew.stat().st_mode | stat.S_IEXEC)
         except (OSError, RuntimeError) as error:
             project_note = f"\nA partial project may be at: {project_path}" if project_path.is_dir() else ""
             print(f"\nProject creation failed: {error}{project_note}", file=sys.stderr)
