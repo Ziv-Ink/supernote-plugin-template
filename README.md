@@ -2,7 +2,7 @@
 
 A simple template for Supernote plugins. Ships with cross-platform scripts (bash + PowerShell) that automate bundling, deploying, and launching plugins on a connected device via ADB.
 
-The generated plugin has no UI — just a single button on the NOTE sidebar.
+The default generated plugin has no UI — just a single button on the NOTE sidebar.
 
 ## Setup
 
