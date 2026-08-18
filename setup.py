@@ -43,7 +43,7 @@ class Setup:
         if self.args.project_name:
             return self.args.project_name.strip()
         if not sys.stdin.isatty():
-            raise ValueError("A project name is required. Run: python3 setup.fixed.py <project-name>")
+            raise ValueError("A project name is required. Run: python3 setup.py <project-name>")
         return input("Project name: ").strip()
 
     def install_dependencies(self) -> bool:
