@@ -88,45 +88,50 @@ try {
         }
     }
 
-    # Extract app.npk
-    $npkEntry = $zip.Entries | Where-Object { $_.FullName -eq 'app.npk' }
-    if (-not $npkEntry) {
-        $zip.Dispose()
-        Write-Die "outer package does not contain app.npk"
+    $hasNative = -not [string]::IsNullOrWhiteSpace($packagedConfig.nativeCodePackage)
+
+    $nativeLibs = $null
+    if ($hasNative) {
+        # Extract app.npk
+        $npkEntry = $zip.Entries | Where-Object { $_.FullName -eq 'app.npk' }
+        if (-not $npkEntry) {
+            $zip.Dispose()
+            Write-Die "outer package does not contain app.npk (required because nativeCodePackage is declared)"
+        }
+        $npkDest = Join-Path $TmpDir "app.npk"
+        [System.IO.Compression.ZipFileExtensions]::ExtractToFile($npkEntry, $npkDest)
+
+        if ((Get-Item $npkDest).Length -eq 0) { Write-Die "nested app.npk is empty" }
+
+        # Validate app.npk contents
+        try {
+            $npkZip = [System.IO.Compression.ZipFile]::OpenRead($npkDest)
+        } catch {
+            Write-Die "nested app.npk is not a valid ZIP archive"
+        }
+
+        $inventory = $npkZip.Entries | ForEach-Object { $_.FullName }
+
+        # Check for unsupported ABIs
+        $unsupportedAbis = $inventory | Where-Object { $_ -match '^lib/(armeabi-v7a|x86|x86_64)/' }
+        if ($unsupportedAbis) {
+            $npkZip.Dispose()
+            Write-Die "nested app.npk contains an unsupported non-arm64 native ABI"
+        }
+
+        # Check for host-owned libraries
+        $hostLibs = $inventory | Where-Object { $_ -match '^lib/arm64-v8a/(libjsi|libreactnative|libhermes|libfbjni|libc\+\+_shared)\.so$' }
+        if ($hostLibs) {
+            $npkZip.Dispose()
+            Write-Die "nested app.npk packages a PluginHost-owned native library"
+        }
+
+        # Gather native libraries for report
+        $nativeLibs = $inventory | Where-Object { $_ -match '^lib/[^/]+/[^/]+\.so$' }
+
+        $npkZip.Dispose()
     }
-    $npkDest = Join-Path $TmpDir "app.npk"
-    [System.IO.Compression.ZipFileExtensions]::ExtractToFile($npkEntry, $npkDest)
     $zip.Dispose()
-
-    if ((Get-Item $npkDest).Length -eq 0) { Write-Die "nested app.npk is empty" }
-
-    # Validate app.npk contents
-    try {
-        $npkZip = [System.IO.Compression.ZipFile]::OpenRead($npkDest)
-    } catch {
-        Write-Die "nested app.npk is not a valid ZIP archive"
-    }
-
-    $inventory = $npkZip.Entries | ForEach-Object { $_.FullName }
-
-    # Check for unsupported ABIs
-    $unsupportedAbis = $inventory | Where-Object { $_ -match '^lib/(armeabi-v7a|x86|x86_64)/' }
-    if ($unsupportedAbis) {
-        $npkZip.Dispose()
-        Write-Die "nested app.npk contains an unsupported non-arm64 native ABI"
-    }
-
-    # Check for host-owned libraries
-    $hostLibs = $inventory | Where-Object { $_ -match '^lib/arm64-v8a/(libjsi|libreactnative|libhermes|libfbjni|libc\+\+_shared)\.so$' }
-    if ($hostLibs) {
-        $npkZip.Dispose()
-        Write-Die "nested app.npk packages a PluginHost-owned native library"
-    }
-
-    # Gather native libraries for report
-    $nativeLibs = $inventory | Where-Object { $_ -match '^lib/[^/]+/[^/]+\.so$' }
-
-    $npkZip.Dispose()
 
     # SHA-256
     $hash = (Get-FileHash -Path $PackagePath -Algorithm SHA256).Hash.ToLower()

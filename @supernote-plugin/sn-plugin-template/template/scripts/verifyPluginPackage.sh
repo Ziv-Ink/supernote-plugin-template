@@ -79,20 +79,31 @@ if [[ -f "$PROJECT_ROOT/PluginConfig.json" ]]; then
         die "package pluginID mismatch: expected $expected_id, found $packaged_id"
 fi
 
-unzip -p "$PACKAGE_PATH" app.npk > "$TMP_DIR/app.npk" ||
-    die 'outer package does not contain app.npk'
-[[ -s "$TMP_DIR/app.npk" ]] || die 'nested app.npk is empty'
-unzip -tqq "$TMP_DIR/app.npk" || die 'nested app.npk is not a valid ZIP archive'
-unzip -Z1 "$TMP_DIR/app.npk" > "$TMP_DIR/app-npk-inventory.txt"
-
-if grep -Eq '^lib/(armeabi-v7a|x86|x86_64)/' "$TMP_DIR/app-npk-inventory.txt"; then
-    die 'nested app.npk contains an unsupported non-arm64 native ABI'
+has_native=0
+if jq -e '.nativeCodePackage | type == "string" and length > 0' "$TMP_DIR/PluginConfig.json" >/dev/null 2>&1; then
+    has_native=1
 fi
 
-if grep -Eq \
-    '^lib/arm64-v8a/(libjsi|libreactnative|libhermes|libfbjni|libc\+\+_shared)\.so$' \
-    "$TMP_DIR/app-npk-inventory.txt"; then
-    die 'nested app.npk packages a PluginHost-owned native library'
+native_libraries=""
+if [[ "$has_native" == 1 ]]; then
+    unzip -p "$PACKAGE_PATH" app.npk > "$TMP_DIR/app.npk" ||
+        die 'outer package does not contain app.npk (required because nativeCodePackage is declared)'
+    [[ -s "$TMP_DIR/app.npk" ]] || die 'nested app.npk is empty'
+    unzip -tqq "$TMP_DIR/app.npk" || die 'nested app.npk is not a valid ZIP archive'
+    unzip -Z1 "$TMP_DIR/app.npk" > "$TMP_DIR/app-npk-inventory.txt"
+
+    if grep -Eq '^lib/(armeabi-v7a|x86|x86_64)/' "$TMP_DIR/app-npk-inventory.txt"; then
+        die 'nested app.npk contains an unsupported non-arm64 native ABI'
+    fi
+
+    if grep -Eq \
+        '^lib/arm64-v8a/(libjsi|libreactnative|libhermes|libfbjni|libc\+\+_shared)\.so$' \
+        "$TMP_DIR/app-npk-inventory.txt"; then
+        die 'nested app.npk packages a PluginHost-owned native library'
+    fi
+
+    native_libraries="$(grep -E '^lib/[^/]+/[^/]+\.so$' \
+        "$TMP_DIR/app-npk-inventory.txt" || true)"
 fi
 
 if command -v sha256sum >/dev/null 2>&1; then
@@ -102,9 +113,6 @@ elif command -v shasum >/dev/null 2>&1; then
 else
     package_hash='unavailable'
 fi
-
-native_libraries="$(grep -E '^lib/[^/]+/[^/]+\.so$' \
-    "$TMP_DIR/app-npk-inventory.txt" || true)"
 
 log "Package: $PACKAGE_PATH"
 log "Plugin: $packaged_name ($packaged_id)"
