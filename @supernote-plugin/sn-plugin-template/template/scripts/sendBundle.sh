@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Load devconfig.json if present
+_load_devconfig="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/load-devconfig.sh"
+[[ -f "$_load_devconfig" ]] && source "$_load_devconfig"
+unset _load_devconfig
+
 readonly PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 ADB_BIN="${ADB_BIN:-adb}"

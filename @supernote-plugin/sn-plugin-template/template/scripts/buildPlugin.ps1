@@ -1,5 +1,9 @@
 # PowerShell Script: Analyze Android Dependencies and Generate PluginConfig.json
 
+# Load devconfig.json if present
+$_loadDevconfig = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) 'load-devconfig.ps1'
+if (Test-Path $_loadDevconfig) { . $_loadDevconfig }
+
 # Set color output function
 function Write-ColorOutput {
     param(

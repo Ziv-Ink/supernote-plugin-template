@@ -2,6 +2,11 @@
 
 set -euo pipefail
 
+# Load devconfig.json if present
+_load_devconfig="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/load-devconfig.sh"
+[[ -f "$_load_devconfig" ]] && source "$_load_devconfig"
+unset _load_devconfig
+
 readonly PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly DEVICE_UI_XML="/sdcard/supernote-deploy-window.xml"
 readonly NOTE_COMPONENT="com.ratta.supernote.note/.view.NoteInsidePagesActivity"

@@ -6,6 +6,10 @@ param(
 $ErrorActionPreference = 'Stop'
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = Resolve-Path (Join-Path $ScriptDir '..') | Select-Object -ExpandProperty Path
+
+# Load devconfig.json if present
+$_loadDevconfig = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) 'load-devconfig.ps1'
+if (Test-Path $_loadDevconfig) { . $_loadDevconfig }
 $DeviceUiXml = "/sdcard/supernote-deploy-window.xml"
 $NoteComponent = "com.ratta.supernote.note/.view.NoteInsidePagesActivity"
 $PluginHostPackage = "com.ratta.supernote.pluginhost"

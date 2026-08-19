@@ -1,6 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
+# Load devconfig.json if present
+_load_devconfig="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/load-devconfig.sh"
+[[ -f "$_load_devconfig" ]] && source "$_load_devconfig"
+unset _load_devconfig
+
 # =========================================================
 # Function: write_color_output
 # Purpose: Print colored messages to the terminal

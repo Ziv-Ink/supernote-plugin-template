@@ -7,6 +7,10 @@ $ErrorActionPreference = 'Stop'
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = Resolve-Path (Join-Path $ScriptDir '..') | Select-Object -ExpandProperty Path
 
+# Load devconfig.json if present
+$_loadDevconfig = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) 'load-devconfig.ps1'
+if (Test-Path $_loadDevconfig) { . $_loadDevconfig }
+
 $AdbBin = if ($env:ADB_BIN) { $env:ADB_BIN } else { 'adb' }
 
 function Write-Die([string]$Message) {
