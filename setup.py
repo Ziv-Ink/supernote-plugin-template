@@ -5,10 +5,10 @@ from __future__ import annotations
 
 import argparse
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
-
 
 def find_supernote_root(script_path: Path) -> Path | None:
     current = script_path.resolve().parent
