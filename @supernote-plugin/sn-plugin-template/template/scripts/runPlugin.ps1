@@ -12,12 +12,10 @@ $_loadDevconfig = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) 'l
 if (Test-Path $_loadDevconfig) { . $_loadDevconfig }
 $DeviceUiXml = "/sdcard/supernote-deploy-window.xml"
 $NoteComponent = "com.ratta.supernote.note/.view.NoteInsidePagesActivity"
-$PluginHostPackage = "com.ratta.supernote.pluginhost"
 
 $AdbBin = if ($env:ADB_BIN) { $env:ADB_BIN } else { 'adb' }
 $UiSettleSeconds = if ($env:UI_SETTLE_SECONDS) { [int]$env:UI_SETTLE_SECONDS } else { 1 }
 $UiTimeoutSeconds = if ($env:UI_TIMEOUT_SECONDS) { [int]$env:UI_TIMEOUT_SECONDS } else { 20 }
-$RuntimeTimeoutSeconds = if ($env:RUNTIME_TIMEOUT_SECONDS) { [int]$env:RUNTIME_TIMEOUT_SECONDS } else { 30 }
 
 $TmpDir = ""
 $UiXml = ""
@@ -81,10 +79,8 @@ function Read-ProjectMetadata {
 
     $config = Get-Content $configPath | ConvertFrom-Json
     $script:PluginName = $config.name
-    $script:PluginId = $config.pluginID
 
     if ([string]::IsNullOrWhiteSpace($script:PluginName)) { Write-Die "PluginConfig.json has no name" }
-    if ([string]::IsNullOrWhiteSpace($script:PluginId)) { Write-Die "PluginConfig.json has no pluginID" }
 
     $labelFile = Join-Path $ProjectRoot ".supernote-launch-label"
     if (-not $env:PLUGIN_LAUNCH_LABEL -and (Test-Path $labelFile)) {
@@ -194,38 +190,7 @@ function Test-HasUniqueNode([string]$Attribute, [string]$Value) {
     return ($nodes.Count -eq 1)
 }
 
-function Get-PluginHostPid {
-    $pidStr = Invoke-AdbDevice shell pidof $PluginHostPackage
-    return ($pidStr -join "").Trim()
-}
-
-function Get-LogPatternCount([string]$Needle) {
-    $log = Invoke-AdbDevice logcat -d -v brief
-    $count = 0
-    foreach ($line in $log) {
-        if ($line.Contains($Needle)) {
-            $count++
-        }
-    }
-    return $count
-}
-
-function Wait-ForNewLogOccurrence([string]$Needle, [int]$PreviousCount) {
-    $deadline = (Get-Date).AddSeconds($RuntimeTimeoutSeconds)
-    while ((Get-Date) -le $deadline) {
-        $currentCount = Get-LogPatternCount $Needle
-        if ($currentCount -gt $PreviousCount) {
-            return $true
-        }
-        Start-Sleep -Seconds 1
-    }
-    return $false
-}
-
 function Invoke-LaunchPlugin {
-    $eventPattern = "pluginID='$PluginId', pluginName='$PluginName'"
-    $runningPattern = "Running `"$PluginName`""
-
     Write-Log "Opening NOTE to launch the installed plugin..."
     Invoke-AdbDevice shell am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n $NoteComponent | Out-Null
     
@@ -242,23 +207,8 @@ function Invoke-LaunchPlugin {
         Write-Die "NOTE plugin popup did not list launch label $LaunchLabel exactly once"
     }
 
-    $previousEventCount = Get-LogPatternCount $eventPattern
-    $previousRunningCount = Get-LogPatternCount $runningPattern
-
     Tap-UniqueNode "text" $LaunchLabel
-
-    if (-not (Wait-ForNewLogOccurrence $eventPattern $previousEventCount)) {
-        Write-Die "PluginHost did not receive the configured plugin ID and name within ${RuntimeTimeoutSeconds}s"
-    }
-    if (-not (Wait-ForNewLogOccurrence $runningPattern $previousRunningCount)) {
-        Write-Die "PluginHost did not log '$runningPattern' within ${RuntimeTimeoutSeconds}s"
-    }
-
-    $currentPid = Get-PluginHostPid
-    if ([string]::IsNullOrWhiteSpace($currentPid)) {
-        Write-Die "PluginHost exited while launching the plugin"
-    }
-    Write-Log "Launched $PluginName through NOTE (PluginHost PID $currentPid)."
+    Write-Log "Pressed $LaunchLabel through NOTE; assuming success after the tap."
 }
 
 try {

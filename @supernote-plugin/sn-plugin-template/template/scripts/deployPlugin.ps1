@@ -345,14 +345,47 @@ function Test-HasUniqueNode([string]$Attribute, [string]$Value) {
     return ($nodes.Count -eq 1)
 }
 
+function Test-HasUniqueNodeWithAttribute(
+    [string]$Attribute,
+    [string]$Value,
+    [string]$RequiredAttribute,
+    [string]$RequiredValue
+) {
+    $nodes = @(Get-NodesMatching $Attribute $Value | Where-Object {
+        $_.Contains("$RequiredAttribute=`"$RequiredValue`"")
+    })
+    return ($nodes.Count -eq 1)
+}
+
+function Test-PluginManagerControlsPresent {
+    if ((Test-HasUniqueNode 'text' 'Plugins') -and
+        (Test-HasUniqueNode 'text' 'Add Plugin')) {
+        return $true
+    }
+
+    return ((Test-HasUniqueNode 'resource-id' 'com.ratta.settings:id/plugin_manage_title_bar') -and
+            (Test-HasUniqueNode 'text' 'Choose Installation Package'))
+}
+
+function Test-InstalledPluginDetailPresent {
+    return ((Test-HasUniqueNodeWithAttribute `
+                'resource-id' `
+                'com.ratta.settings:id/plugin_detail_title' `
+                'text' `
+                $PluginName) -and
+            (Test-HasUniqueNodeWithAttribute `
+                'resource-id' `
+                'com.ratta.settings:id/plugin_detail_delete' `
+                'text' `
+                'Uninstall'))
+}
+
 function Test-PluginManagerPage {
     if (-not (Wait-ForForeground 'com.ratta.settings/com.ratta.settings.SettingsActivity')) { return $false }
     if (-not (Try-DumpUi)) { return $false }
     $current = Get-ForegroundWindow
     if ($current -notmatch [regex]::Escape('com.ratta.settings/com.ratta.settings.SettingsActivity')) { return $false }
-    if (-not (Test-HasUniqueNode 'text' 'Plugins')) { return $false }
-    if (-not (Test-HasUniqueNode 'text' 'Add Plugin')) { return $false }
-    return $true
+    return (Test-PluginManagerControlsPresent)
 }
 
 function Wait-ForInstalledPlugin {
@@ -362,8 +395,10 @@ function Wait-ForInstalledPlugin {
         $current = Get-ForegroundWindow
         if ($current -match [regex]::Escape('com.ratta.settings/com.ratta.settings.SettingsActivity')) {
             if (Try-DumpUi) {
-                if ((Test-HasUniqueNode 'text' 'Plugins') -and
-                    (Test-HasUniqueNode 'text' 'Add Plugin') -and
+                if (Test-InstalledPluginDetailPresent) {
+                    return $true
+                }
+                if ((Test-PluginManagerControlsPresent) -and
                     (Test-HasUniqueNode 'text' $PluginName)) {
                     return $true
                 }
@@ -422,7 +457,14 @@ function Open-PluginManager {
 }
 
 function Open-PackagePicker {
-    Tap-UniqueNode 'text' 'Add Plugin'
+    Dump-Ui
+    if (Test-HasUniqueNode 'text' 'Choose Installation Package') {
+        Tap-UniqueNode 'text' 'Choose Installation Package'
+    } elseif (Test-HasUniqueNode 'text' 'Add Plugin') {
+        Tap-UniqueNode 'text' 'Add Plugin'
+    } else {
+        Write-Die "Plugin installation package action was not found"
+    }
     if (-not (Wait-ForForeground 'com.ratta.supernote.inbox/com.ratta.supernote.explorer.SelectFileActivity')) {
         Write-Die "Select Plugin picker did not produce a foreground window"
     }
@@ -452,7 +494,7 @@ function Install-SelectedPackage {
     Tap-UniqueNode 'text' 'Install'
 
     if (-not (Wait-ForInstalledPlugin)) {
-        Write-Die "Install did not list $PluginName on the verified Supernote Plugins page within ${InstallTimeoutSeconds}s"
+        Write-Die "Install did not confirm $PluginName in Supernote Settings within ${InstallTimeoutSeconds}s"
     }
 
     $currentPid = Wait-ForPluginHostAvailable

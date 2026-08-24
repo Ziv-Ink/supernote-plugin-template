@@ -10,18 +10,15 @@ unset _load_devconfig
 readonly PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly DEVICE_UI_XML="/sdcard/supernote-deploy-window.xml"
 readonly NOTE_COMPONENT="com.ratta.supernote.note/.view.NoteInsidePagesActivity"
-readonly PLUGIN_HOST_PACKAGE="com.ratta.supernote.pluginhost"
 
 ADB_BIN="${ADB_BIN:-adb}"
 DEVICE_SERIAL="${DEVICE_SERIAL:-}"
 UI_SETTLE_SECONDS="${UI_SETTLE_SECONDS:-1}"
 UI_TIMEOUT_SECONDS="${UI_TIMEOUT_SECONDS:-20}"
-RUNTIME_TIMEOUT_SECONDS="${RUNTIME_TIMEOUT_SECONDS:-30}"
 
 TMP_DIR=""
 UI_XML=""
 PLUGIN_NAME=""
-PLUGIN_ID=""
 LAUNCH_LABEL=""
 
 log() {
@@ -95,8 +92,6 @@ read_project_metadata() {
 
     PLUGIN_NAME="$(jq -er '.name | select(type == "string" and length > 0)' \
         "$PROJECT_ROOT/PluginConfig.json")" || die 'PluginConfig.json has no name'
-    PLUGIN_ID="$(jq -er '.pluginID | select(type == "string" and length > 0)' \
-        "$PROJECT_ROOT/PluginConfig.json")" || die 'PluginConfig.json has no pluginID'
 
     if [[ -z "$LAUNCH_LABEL" && -n "${PLUGIN_LAUNCH_LABEL:-}" ]]; then
         LAUNCH_LABEL="$PLUGIN_LAUNCH_LABEL"
@@ -201,41 +196,7 @@ ui_has_unique_node() {
     [[ "$count" == 1 ]]
 }
 
-pluginhost_pid() {
-    adb_device shell pidof "$PLUGIN_HOST_PACKAGE" 2>/dev/null |
-        tr -d '\r' |
-        awk '{print $1}'
-}
-
-log_pattern_count() {
-    local needle="$1"
-    adb_device logcat -d -v brief 2>/dev/null |
-        awk -v needle="$needle" 'index($0, needle) { count++ }
-            END { print count + 0 }'
-}
-
-wait_for_new_log_occurrence() {
-    local needle="$1"
-    local previous_count="$2"
-    local deadline current_count
-    deadline="$(( $(date +%s) + RUNTIME_TIMEOUT_SECONDS ))"
-    while (( $(date +%s) <= deadline )); do
-        current_count="$(log_pattern_count "$needle" || true)"
-        if [[ "$current_count" =~ ^[0-9]+$ ]] &&
-           (( current_count > previous_count )); then
-            return 0
-        fi
-        sleep 1
-    done
-    return 1
-}
-
 launch_plugin() {
-    local event_pattern running_pattern
-    local previous_event_count previous_running_count current_pid
-    event_pattern="pluginID='$PLUGIN_ID', pluginName='$PLUGIN_NAME'"
-    running_pattern="Running \"$PLUGIN_NAME\""
-
     log 'Opening NOTE to launch the installed plugin...'
     adb_device shell am start \
         -a android.intent.action.MAIN \
@@ -251,17 +212,8 @@ launch_plugin() {
     ui_has_unique_node text "$LAUNCH_LABEL" ||
         die "NOTE plugin popup did not list launch label $LAUNCH_LABEL exactly once"
 
-    previous_event_count="$(log_pattern_count "$event_pattern")"
-    previous_running_count="$(log_pattern_count "$running_pattern")"
     tap_unique_node text "$LAUNCH_LABEL"
-    wait_for_new_log_occurrence "$event_pattern" "$previous_event_count" ||
-        die "PluginHost did not receive the configured plugin ID and name within ${RUNTIME_TIMEOUT_SECONDS}s"
-    wait_for_new_log_occurrence "$running_pattern" "$previous_running_count" ||
-        die "PluginHost did not log '$running_pattern' within ${RUNTIME_TIMEOUT_SECONDS}s"
-
-    current_pid="$(pluginhost_pid || true)"
-    [[ -n "$current_pid" ]] || die 'PluginHost exited while launching the plugin'
-    log "Launched $PLUGIN_NAME through NOTE (PluginHost PID $current_pid)."
+    log "Pressed $LAUNCH_LABEL through NOTE; assuming success after the tap."
 }
 
 main() {

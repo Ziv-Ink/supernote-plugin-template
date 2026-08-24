@@ -388,6 +388,38 @@ ui_has_unique_node() {
     [[ "$count" == 1 ]]
 }
 
+ui_has_unique_node_with_attribute() {
+    local attribute="$1"
+    local value="$2"
+    local required_attribute="$3"
+    local required_value="$4"
+    local count
+    count="$(nodes_matching "$attribute" "$value" |
+        grep -F "${required_attribute}=\"${required_value}\"" |
+        awk 'NF {count++} END {print count + 0}')"
+    [[ "$count" == 1 ]]
+}
+
+plugin_manager_controls_present() {
+    if ui_has_unique_node text 'Plugins' &&
+       ui_has_unique_node text 'Add Plugin'; then
+        return 0
+    fi
+
+    ui_has_unique_node resource-id \
+        'com.ratta.settings:id/plugin_manage_title_bar' &&
+        ui_has_unique_node text 'Choose Installation Package'
+}
+
+installed_plugin_detail_present() {
+    ui_has_unique_node_with_attribute resource-id \
+        'com.ratta.settings:id/plugin_detail_title' \
+        text "$PLUGIN_NAME" &&
+        ui_has_unique_node_with_attribute resource-id \
+            'com.ratta.settings:id/plugin_detail_delete' \
+            text 'Uninstall'
+}
+
 verify_plugin_manager_page() {
     wait_for_foreground 'com.ratta.settings/com.ratta.settings.SettingsActivity' ||
         return 1
@@ -395,8 +427,7 @@ verify_plugin_manager_page() {
     [[ "$(foreground_window 2>/dev/null || true)" == \
        *'com.ratta.settings/com.ratta.settings.SettingsActivity'* ]] ||
         return 1
-    ui_has_unique_node text 'Plugins' || return 1
-    ui_has_unique_node text 'Add Plugin' || return 1
+    plugin_manager_controls_present
 }
 
 wait_for_installed_plugin() {
@@ -407,8 +438,10 @@ wait_for_installed_plugin() {
         if [[ "$current" == \
               *'com.ratta.settings/com.ratta.settings.SettingsActivity'* ]] &&
            try_dump_ui; then
-            if ui_has_unique_node text 'Plugins' &&
-               ui_has_unique_node text 'Add Plugin' &&
+            if installed_plugin_detail_present; then
+                return 0
+            fi
+            if plugin_manager_controls_present &&
                ui_has_unique_node text "$PLUGIN_NAME"; then
                 return 0
             fi
@@ -478,7 +511,14 @@ open_plugin_manager() {
 }
 
 open_package_picker() {
-    tap_unique_node text 'Add Plugin'
+    dump_ui
+    if ui_has_unique_node text 'Choose Installation Package'; then
+        tap_unique_node text 'Choose Installation Package'
+    elif ui_has_unique_node text 'Add Plugin'; then
+        tap_unique_node text 'Add Plugin'
+    else
+        die 'Plugin installation package action was not found'
+    fi
     wait_for_foreground \
         'com.ratta.supernote.inbox/com.ratta.supernote.explorer.SelectFileActivity' ||
         die 'Select Plugin picker did not produce a foreground window'
@@ -508,7 +548,7 @@ install_selected_package() {
     tap_unique_node text 'Install'
 
     wait_for_installed_plugin ||
-        die "Install did not list $PLUGIN_NAME on the verified Supernote Plugins page within ${INSTALL_TIMEOUT_SECONDS}s"
+        die "Install did not confirm $PLUGIN_NAME in Supernote Settings within ${INSTALL_TIMEOUT_SECONDS}s"
 
     current_pid="$(wait_for_pluginhost_available || true)"
     [[ -n "$current_pid" ]] ||
