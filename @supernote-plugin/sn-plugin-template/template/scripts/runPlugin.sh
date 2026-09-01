@@ -10,11 +10,13 @@ unset _load_devconfig
 readonly PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly DEVICE_UI_XML="/sdcard/supernote-deploy-window.xml"
 readonly NOTE_COMPONENT="com.ratta.supernote.note/.view.NoteInsidePagesActivity"
+readonly PLUGIN_HOST_PACKAGE="com.ratta.supernote.pluginhost"
 
 ADB_BIN="${ADB_BIN:-adb}"
 DEVICE_SERIAL="${DEVICE_SERIAL:-}"
 UI_SETTLE_SECONDS="${UI_SETTLE_SECONDS:-1}"
 UI_TIMEOUT_SECONDS="${UI_TIMEOUT_SECONDS:-20}"
+RUNTIME_TIMEOUT_SECONDS="${RUNTIME_TIMEOUT_SECONDS:-30}"
 
 TMP_DIR=""
 UI_XML=""
@@ -196,7 +198,39 @@ ui_has_unique_node() {
     [[ "$count" == 1 ]]
 }
 
+pluginhost_pid() {
+    adb_device shell pidof "$PLUGIN_HOST_PACKAGE" 2>/dev/null |
+        tr -d '\r' |
+        awk '{print $1}'
+}
+
+plugin_launch_event_count() {
+    local plugin_name_pattern="pluginName='$PLUGIN_NAME'"
+    adb_device logcat -d -v brief 2>/dev/null |
+        awk -v plugin_name_pattern="$plugin_name_pattern" \
+            'index($0, "sendMenuItemEvent menuItem:PluginSideButton") &&
+             index($0, plugin_name_pattern) { count++ }
+            END { print count + 0 }'
+}
+
+wait_for_new_plugin_launch_event() {
+    local previous_count="$1"
+    local deadline current_count
+    deadline="$(( $(date +%s) + RUNTIME_TIMEOUT_SECONDS ))"
+    while (( $(date +%s) <= deadline )); do
+        current_count="$(plugin_launch_event_count || true)"
+        if [[ "$current_count" =~ ^[0-9]+$ ]] &&
+           (( current_count > previous_count )); then
+            return 0
+        fi
+        sleep 1
+    done
+    return 1
+}
+
 launch_plugin() {
+    local previous_event_count current_pid
+
     log 'Opening NOTE to launch the installed plugin...'
     adb_device shell am start \
         -a android.intent.action.MAIN \
@@ -212,8 +246,14 @@ launch_plugin() {
     ui_has_unique_node text "$LAUNCH_LABEL" ||
         die "NOTE plugin popup did not list launch label $LAUNCH_LABEL exactly once"
 
+    previous_event_count="$(plugin_launch_event_count)"
     tap_unique_node text "$LAUNCH_LABEL"
-    log "Pressed $LAUNCH_LABEL through NOTE; assuming success after the tap."
+    wait_for_new_plugin_launch_event "$previous_event_count" ||
+        die "PluginHost did not acknowledge launch of $PLUGIN_NAME within ${RUNTIME_TIMEOUT_SECONDS}s"
+
+    current_pid="$(pluginhost_pid || true)"
+    [[ -n "$current_pid" ]] || die 'PluginHost exited while launching the plugin'
+    log "Launched $PLUGIN_NAME through NOTE (PluginHost PID $current_pid)."
 }
 
 main() {

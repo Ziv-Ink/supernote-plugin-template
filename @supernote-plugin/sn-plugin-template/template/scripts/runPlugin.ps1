@@ -12,10 +12,12 @@ $_loadDevconfig = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) 'l
 if (Test-Path $_loadDevconfig) { . $_loadDevconfig }
 $DeviceUiXml = "/sdcard/supernote-deploy-window.xml"
 $NoteComponent = "com.ratta.supernote.note/.view.NoteInsidePagesActivity"
+$PluginHostPackage = "com.ratta.supernote.pluginhost"
 
 $AdbBin = if ($env:ADB_BIN) { $env:ADB_BIN } else { 'adb' }
 $UiSettleSeconds = if ($env:UI_SETTLE_SECONDS) { [int]$env:UI_SETTLE_SECONDS } else { 1 }
 $UiTimeoutSeconds = if ($env:UI_TIMEOUT_SECONDS) { [int]$env:UI_TIMEOUT_SECONDS } else { 20 }
+$RuntimeTimeoutSeconds = if ($env:RUNTIME_TIMEOUT_SECONDS) { [int]$env:RUNTIME_TIMEOUT_SECONDS } else { 30 }
 
 $TmpDir = ""
 $UiXml = ""
@@ -190,6 +192,36 @@ function Test-HasUniqueNode([string]$Attribute, [string]$Value) {
     return ($nodes.Count -eq 1)
 }
 
+function Get-PluginHostPid {
+    $pidStr = Invoke-AdbDevice shell pidof $PluginHostPackage
+    return ($pidStr -join "").Trim()
+}
+
+function Get-PluginLaunchEventCount {
+    $log = Invoke-AdbDevice logcat -d -v brief
+    $eventPattern = 'sendMenuItemEvent menuItem:PluginSideButton'
+    $pluginNamePattern = "pluginName='$PluginName'"
+    $count = 0
+    foreach ($line in $log) {
+        if ($line.Contains($eventPattern) -and $line.Contains($pluginNamePattern)) {
+            $count++
+        }
+    }
+    return $count
+}
+
+function Wait-ForNewPluginLaunchEvent([int]$PreviousCount) {
+    $deadline = (Get-Date).AddSeconds($RuntimeTimeoutSeconds)
+    while ((Get-Date) -le $deadline) {
+        $currentCount = Get-PluginLaunchEventCount
+        if ($currentCount -gt $PreviousCount) {
+            return $true
+        }
+        Start-Sleep -Seconds 1
+    }
+    return $false
+}
+
 function Invoke-LaunchPlugin {
     Write-Log "Opening NOTE to launch the installed plugin..."
     Invoke-AdbDevice shell am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n $NoteComponent | Out-Null
@@ -207,8 +239,18 @@ function Invoke-LaunchPlugin {
         Write-Die "NOTE plugin popup did not list launch label $LaunchLabel exactly once"
     }
 
+    $previousEventCount = Get-PluginLaunchEventCount
     Tap-UniqueNode "text" $LaunchLabel
-    Write-Log "Pressed $LaunchLabel through NOTE; assuming success after the tap."
+
+    if (-not (Wait-ForNewPluginLaunchEvent $previousEventCount)) {
+        Write-Die "PluginHost did not acknowledge launch of $PluginName within ${RuntimeTimeoutSeconds}s"
+    }
+
+    $currentPid = Get-PluginHostPid
+    if ([string]::IsNullOrWhiteSpace($currentPid)) {
+        Write-Die "PluginHost exited while launching the plugin"
+    }
+    Write-Log "Launched $PluginName through NOTE (PluginHost PID $currentPid)."
 }
 
 try {
