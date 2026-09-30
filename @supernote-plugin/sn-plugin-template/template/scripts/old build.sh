@@ -712,15 +712,15 @@ main() {
     fi
 
     if [[ "$should_build_native" -eq 0 ]]; then
+        local autolink_pkgs
+        autolink_pkgs="$(get_react_packages_from_autolinking_source "$project_root" "com.facebook.react.shell.MainReactPackage|com.ratta.supernote.note.plugincore.PluginPackage|com.ratta.supernote.pluginlib.PluginPackage" || true)"
+
+        local all_pkgs
+        all_pkgs="$(printf "%s\n%s\n" "$project_react_pkgs" "$autolink_pkgs" | awk 'NF' | sort -u)"
+        update_plugin_config_packages "$project_root" "$gen_dir" "$all_pkgs"
+
         if build_android_apk "$project_root" "$gen_cfg"; then
             copy_apk_and_update_config "$project_root" "$gen_dir" "$gen_cfg" || true
-
-            local autolink_pkgs
-            autolink_pkgs="$(get_react_packages_from_autolinking_source "$project_root" "com.facebook.react.shell.MainReactPackage|com.ratta.supernote.note.plugincore.PluginPackage|com.ratta.supernote.pluginlib.PluginPackage" || true)"
-
-            local all_pkgs
-            all_pkgs="$(printf "%s\n%s\n" "$project_react_pkgs" "$autolink_pkgs" | awk 'NF' | sort -u)"
-            update_plugin_config_packages "$project_root" "$gen_dir" "$all_pkgs"
         else
             write_color_output "APK build failed" "Red"
         fi
