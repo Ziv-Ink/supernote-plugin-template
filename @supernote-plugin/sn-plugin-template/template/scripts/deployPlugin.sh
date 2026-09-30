@@ -406,9 +406,15 @@ plugin_manager_controls_present() {
         return 0
     fi
 
-    ui_has_unique_node resource-id \
+    if ui_has_unique_node resource-id \
         'com.ratta.settings:id/plugin_manage_title_bar' &&
-        ui_has_unique_node text 'Choose Installation Package'
+       ui_has_unique_node text 'Choose Installation Package'; then
+        return 0
+    fi
+
+    ui_has_unique_node resource-id \
+        'com.ratta.settings:id/setting_sub_title' &&
+        ui_has_unique_node text 'Select Plugin Package'
 }
 
 installed_plugin_detail_present() {
@@ -512,7 +518,9 @@ open_plugin_manager() {
 
 open_package_picker() {
     dump_ui
-    if ui_has_unique_node text 'Choose Installation Package'; then
+    if ui_has_unique_node text 'Select Plugin Package'; then
+        tap_unique_node text 'Select Plugin Package'
+    elif ui_has_unique_node text 'Choose Installation Package'; then
         tap_unique_node text 'Choose Installation Package'
     elif ui_has_unique_node text 'Add Plugin'; then
         tap_unique_node text 'Add Plugin'

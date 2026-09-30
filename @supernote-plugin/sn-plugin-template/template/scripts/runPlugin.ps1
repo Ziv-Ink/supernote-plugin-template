@@ -155,7 +155,7 @@ function Get-NodesMatching([string]$Attribute, [string]$Value) {
 }
 
 function Get-UniqueBounds([string]$Attribute, [string]$Value) {
-    $nodes = Get-NodesMatching $Attribute $Value
+    $nodes = @(Get-NodesMatching $Attribute $Value)
     if ($nodes.Count -ne 1) {
         Write-Die "expected one UI node with $Attribute=`"$Value`", found $($nodes.Count)"
     }

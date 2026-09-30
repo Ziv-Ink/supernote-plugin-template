@@ -311,7 +311,7 @@ function Get-NodesMatching([string]$Attribute, [string]$Value) {
 }
 
 function Get-UniqueBounds([string]$Attribute, [string]$Value) {
-    $nodes = Get-NodesMatching $Attribute $Value
+    $nodes = @(Get-NodesMatching $Attribute $Value)
     if ($nodes.Count -ne 1) {
         Write-Die "expected one UI node with $Attribute=`"$Value`", found $($nodes.Count)"
     }
@@ -363,8 +363,13 @@ function Test-PluginManagerControlsPresent {
         return $true
     }
 
-    return ((Test-HasUniqueNode 'resource-id' 'com.ratta.settings:id/plugin_manage_title_bar') -and
-            (Test-HasUniqueNode 'text' 'Choose Installation Package'))
+    if ((Test-HasUniqueNode 'resource-id' 'com.ratta.settings:id/plugin_manage_title_bar') -and
+        (Test-HasUniqueNode 'text' 'Choose Installation Package')) {
+        return $true
+    }
+
+    return ((Test-HasUniqueNode 'resource-id' 'com.ratta.settings:id/setting_sub_title') -and
+            (Test-HasUniqueNode 'text' 'Select Plugin Package'))
 }
 
 function Test-InstalledPluginDetailPresent {
@@ -421,8 +426,8 @@ function Get-PluginHostPid {
 function Wait-ForPluginHostAvailable {
     $deadline = (Get-Date).AddSeconds($RuntimeTimeoutSeconds)
     while ((Get-Date) -le $deadline) {
-        $pid = Get-PluginHostPid
-        if (-not [string]::IsNullOrWhiteSpace($pid)) { return $pid }
+        $hostPid = Get-PluginHostPid
+        if (-not [string]::IsNullOrWhiteSpace($hostPid)) { return $hostPid }
         Start-Sleep -Seconds 1
     }
     return ""
@@ -458,7 +463,9 @@ function Open-PluginManager {
 
 function Open-PackagePicker {
     Dump-Ui
-    if (Test-HasUniqueNode 'text' 'Choose Installation Package') {
+    if (Test-HasUniqueNode 'text' 'Select Plugin Package') {
+        Tap-UniqueNode 'text' 'Select Plugin Package'
+    } elseif (Test-HasUniqueNode 'text' 'Choose Installation Package') {
         Tap-UniqueNode 'text' 'Choose Installation Package'
     } elseif (Test-HasUniqueNode 'text' 'Add Plugin') {
         Tap-UniqueNode 'text' 'Add Plugin'
